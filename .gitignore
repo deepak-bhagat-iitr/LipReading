@@ -10,4 +10,9 @@ models/*.h5
 *.zip
 *.part
 data*.zip*
+x.py
+y.py
+LipNet.ipynb
+main.py
+script.py
 

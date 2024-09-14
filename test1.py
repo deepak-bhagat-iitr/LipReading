@@ -9,6 +9,7 @@ import numpy as np
 from typing import List
 from matplotlib import pyplot as plt
 import imageio
+from tensorflow.keras.callbacks import EarlyStopping
 import gdown
 
 # Configure TensorFlow for GPU usage
@@ -98,8 +99,8 @@ data = data.padded_batch(2, padded_shapes=([75, 46, 140, 1], [None]))
 data = data.prefetch(tf.data.AUTOTUNE)
 
 # Split the dataset for training and testing
-train = data.take(450)
-test = data.skip(450)
+train = data.take(100)
+test = data.skip(100)
 
 
 # %%
@@ -204,18 +205,31 @@ class ProduceExample(tf.keras.callbacks.Callback):
 
 
 # %%
-# Compile the model
+
+
+# %%
+# Compile the model with an Adam optimizer and CTC los
 model.compile(optimizer=Adam(learning_rate=0.0001), loss=CTCLoss)
 
-# Save only weights with `.weights.h5` extension
-checkpoint_callback = ModelCheckpoint(os.path.join('models', 'checkpoint.weights.h5'), monitor='loss', save_weights_only=True)
+# Define a checkpoint callback to save only model weights
+checkpoint_callback = ModelCheckpoint(os.path.join('models', 'checkpoint.weights.h5'), 
+                                      monitor='loss', 
+                                      save_weights_only=True)
 
-# Define callbacks
+# Define learning rate scheduler callback
 schedule_callback = LearningRateScheduler(scheduler)
+
+# Define the example callback (custom callback)
 example_callback = ProduceExample(test)
 
-# Train the model
-model.fit(train, validation_data=test, epochs=10, callbacks=[checkpoint_callback, schedule_callback, example_callback])
+# Split the dataset
+train = data.take(100)  # Take the first 100 samples for training
+test = data.skip(100).take(20)  # Use the next 20 samples for testing
+
+# Train the model for a minimum number of epochs (e.g., 10)
+model.fit(train, validation_data=test, epochs=10, 
+          callbacks=[checkpoint_callback, schedule_callback, example_callback], 
+          batch_size=16)  # Small batch size to fit in RTX 3050 memory
 
 
 # %%
@@ -230,3 +244,6 @@ decoded = tf.keras.backend.ctc_decode(yhat, input_length=[75], greedy=True)[0][0
 
 print('PREDICTIONS','~' * 100, )
 print([tf.strings.reduce_join([num_to_char(word) for word in sentence]) for sentence in decoded])
+
+
+# %%
