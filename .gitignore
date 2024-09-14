@@ -1,0 +1,13 @@
+/data/
+/myenv/
+data.zip
+models - checkpoint 50.zip
+models - checkpoint 96.zip
+models/*.zip
+models/*.h5
+*.zip
+# Ignore large data files and parts
+*.zip
+*.part
+data*.zip*
+
